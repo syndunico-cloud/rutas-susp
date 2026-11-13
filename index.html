@@ -1,0 +1,486 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Suspensiones por Zona</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap">
+<style>
+/* Layout: resumen, datos de entrada, avance por zona en línea de tiempo, calendario con una barra de color por zona y ruta, tablas de zonas y rutas. */
+:root{
+  --bg:#F5F6F8; --surface:#FFFFFF; --fg:#16202A; --muted:#5A6672; --line:#DCE0E5;
+  --accent:#2B4C9B; --ok:#1B7A44; --bad:#B3261E; --okbg:#E4F4EA; --badbg:#FBE7E5; --soft:#EEF0F3; --mark:#16202A;
+  --font-display:'Space Grotesk','Inter',system-ui,sans-serif;
+  --font-body:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0F1318; --surface:#171D24; --fg:#E8ECF0; --muted:#9BA6B2; --line:#2A333D;
+    --accent:#93ABFF; --ok:#62CB8D; --bad:#FF8F86; --okbg:#143323; --badbg:#3B1B19; --soft:#1E262F; --mark:#E8ECF0; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0F1318; --surface:#171D24; --fg:#E8ECF0; --muted:#9BA6B2; --line:#2A333D;
+  --accent:#93ABFF; --ok:#62CB8D; --bad:#FF8F86; --okbg:#143323; --badbg:#3B1B19; --soft:#1E262F; --mark:#E8ECF0; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-body);font-size:14px;line-height:1.5;
+  padding-block:24px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1{font-family:var(--font-display);font-size:28px;line-height:1.15;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-family:var(--font-display);font-size:16px;margin:0 0 10px;letter-spacing:.01em}
+.lead{color:var(--muted);margin:6px 0 0;max-width:72ch}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
+.verdict{border-radius:8px;padding:12px 16px;font-weight:500;border:1px solid var(--line);background:var(--soft)}
+.verdict.ok{background:var(--okbg);color:var(--ok);border-color:var(--ok)}
+.verdict.bad{background:var(--badbg);color:var(--bad);border-color:var(--bad)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;min-width:0}
+.kpi .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.kpi .v{font-family:var(--font-display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.2;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--muted);margin-top:2px}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:14px;align-items:end}
+label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+input[type=number],input[type=date],select{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.chk{flex-direction:row;align-items:center;gap:8px;color:var(--fg);font-size:14px;padding-bottom:8px}
+.chk input{width:16px;height:16px;accent-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin:12px 0 0;max-width:80ch}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:760px;font-variant-numeric:tabular-nums;font-size:13px}
+th{font-size:11.5px;font-weight:500;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;position:sticky;top:0;background:var(--surface)}
+td{padding:5px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td.n,th.n{text-align:right}
+tr:last-child td{border-bottom:0}
+tr.nodata td{color:var(--muted)}
+.tbox{max-height:520px;overflow:auto}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:6px}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-bottom:12px;font-size:12px}
+.tl{min-width:640px;display:flex;flex-direction:column;gap:5px}
+.tr{display:flex;align-items:center;gap:8px}
+.tl-l{width:96px;flex:none;font-size:12px}
+.track{position:relative;flex:1;height:22px;background:var(--soft);border-radius:4px}
+.track.axis{background:transparent;height:16px}
+.bar{position:absolute;top:2px;bottom:2px;border-radius:3px;font-size:11px;font-weight:600;padding:0 5px;overflow:hidden;white-space:nowrap;display:flex;align-items:center}
+.tick{position:absolute;top:0;font-size:11px;color:var(--muted);transform:translateX(-1px);white-space:nowrap}
+.nd{position:absolute;left:8px;top:3px;font-size:11px;color:var(--muted)}
+.win{position:absolute;top:0;bottom:0;border:1px dashed var(--muted);border-radius:4px;background:var(--surface)}
+td input[type=text],td input[type=date]{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0}
+td input[type=text]{width:120px}
+td select{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 7px;min-width:0;max-width:300px}
+td input[type=color]{width:42px;height:28px;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--bg);cursor:pointer}
+td input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+button{font:inherit;font-size:13px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:5px 10px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.warn{color:var(--bad)}
+.cal{min-width:760px;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+.dow{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;padding:2px 4px}
+.cell{background:var(--bg);border:1px solid var(--line);border-radius:6px;min-height:92px;padding:4px;display:flex;flex-direction:column;gap:3px;min-width:0}
+.cell.pre,.cell.off{background:var(--soft);opacity:.7}
+.cell.work{background:var(--surface)}
+.dn{font-size:12px;font-weight:600;display:flex;justify-content:space-between;gap:4px}
+.dn small{font-weight:400;color:var(--muted)}
+.tag{font-size:10.5px;line-height:1.25;font-weight:600}
+.seg{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;padding:2px 5px;border-radius:3px;font-size:10.5px;line-height:1.3;font-weight:600;font-variant-numeric:tabular-nums}
+.seg .rt{min-width:0;overflow-wrap:anywhere}
+.seg .nn{flex:none}
+.cap{margin-top:auto;font-size:10.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+ul.as{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+ul.as b{color:var(--fg);font-weight:600}
+@media (max-width:520px){h1{font-size:23px}.kpi .v{font-size:21px}}
+@media (prefers-reduced-motion:no-preference){.bar{transition:left .2s,width .2s}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Suspensiones por zona</h1>
+    <p class="lead">Programa por semanas del 17 de noviembre al 23 de diciembre de 2026. Cada zona tiene su color y su ventana de fechas, y el calendario muestra qué ruta atiende la cuadrilla cada día. Los datos de rutas, cuentas y adeudo vienen del reporte de limitaciones del 27/10/2026.</p>
+  </header>
+
+  <div id="verdict" class="verdict"></div>
+  <div id="kpis" class="kpis"></div>
+
+  <section class="panel">
+    <h2>Semanas por zona</h2>
+    <div class="scroll"><table style="min-width:640px">
+      <thead><tr><th>Zonas (en orden)</th><th>Desde</th><th>Hasta</th><th>Trabaja sábado</th><th></th></tr></thead>
+      <tbody id="trbody"></tbody>
+    </table></div>
+    <p class="hint"><button type="button" id="addtr">Agregar semana</button></p>
+    <p class="hint" id="trnote"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Días con ruta fija</h2>
+    <div class="scroll"><table style="min-width:700px">
+      <thead><tr><th>Fecha</th><th>Ruta</th><th>Zona</th><th>Color del día</th><th class="n">Cuadrillas para terminar la ruta</th><th></th></tr></thead>
+      <tbody id="pnbody"></tbody>
+    </table></div>
+    <p class="hint"><button type="button" id="addpn">Agregar día</button></p>
+    <p class="hint">En un día con ruta fija solo se trabaja esa ruta. Elige la ruta y el calendario te dice a qué zona pertenece.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Datos de entrada</h2>
+    <div class="controls">
+      <label for="sc">Cuadrillas<input id="sc" type="number" min="1" max="300" step="1" value="4"></label>
+      <label for="sr">Suspensiones por hora por cuadrilla<input id="sr" type="number" min="0.5" max="100" step="0.5" value="3"></label>
+      <label for="inner">Rutas dentro de cada zona
+        <select id="inner">
+          <option value="monto">Mayor adeudo primero (orden del reporte)</option>
+          <option value="ratio">Más adeudo por cuenta primero</option>
+        </select>
+      </label>
+      <label for="sx">Días de la ruta 027 antes de pasar a la siguiente (0 = sin límite)<input id="sx" type="number" min="0" max="30" step="1" value="2"></label>
+      <label for="tasa">Cuentas que pagan tras la suspensión (%)<input id="tasa" type="number" min="0" max="100" step="5" value="60"></label>
+      <label class="chk" for="extra"><input id="extra" type="checkbox">Usar horas extra (17 a 19 h, lun a vie)</label>
+      <label for="pct">Personal en extra por día (%)<input id="pct" type="number" min="0" max="100" step="5" value="60" disabled></label>
+    </div>
+    <p class="hint" id="note"></p>
+  </section>
+
+  <section class="panel">
+    <h2>Avance por zona</h2>
+    <div class="scroll"><div class="tl" id="tl"></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Calendario por zona y ruta</h2>
+    <div class="legend" id="legend"></div>
+    <div class="scroll"><div class="cal" id="cal"></div></div>
+  </section>
+
+  <section class="panel">
+    <h2>Resumen por zona</h2>
+    <div class="scroll"><table>
+      <thead><tr><th>Zona</th><th class="n">Rutas</th><th class="n">Cuentas</th><th class="n">Adeudo</th><th>Semanas</th><th class="n">Cuentas hechas</th><th class="n">Adeudo cubierto</th><th class="n">Cuadrillas para terminar</th></tr></thead>
+      <tbody id="ztable"></tbody>
+    </table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Rutas en orden de atención</h2>
+    <div class="scroll tbox"><table>
+      <thead><tr><th class="n">#</th><th>Zona</th><th>Ruta</th><th class="n">Cuentas</th><th class="n">Adeudo</th><th class="n">Adeudo por cuenta</th><th>Inicia</th><th>Termina</th><th class="n">Cuentas hechas</th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table></div>
+  </section>
+
+  <section class="panel">
+    <h2>Supuestos de la simulación</h2>
+    <ul class="as">
+      <li><b>Datos:</b> 65 rutas, 8,368 cuentas y $26,855,813.25 de adeudo, tal como vienen en el reporte. Las zonas 3, 7 y 10 no aparecen en el reporte, así que no tienen cuentas.</li>
+      <li><b>Semanas:</b> cada zona solo se trabaja dentro de sus fechas. Si una zona aparece en dos semanas, lo que no cabe en la primera pasa a la segunda. Lo que no cabe en sus semanas se queda pendiente.</li>
+      <li><b>Zonas sin fecha:</b> no se programan. Agrégales una semana o un día fijo en las tablas de arriba.</li>
+      <li><b>Días con ruta fija:</b> ese día solo se trabaja la ruta elegida, con el color elegido. Si la ruta no cabe en ese día con tus cuadrillas, lo que sobra queda pendiente.</li>
+      <li><b>Ruta 027 de la zona 5:</b> es la más grande, así que se trabaja solo los días indicados (2 por defecto) y se sigue con las demás rutas de la zona 5. Lo que queda de la 027 se retoma al terminar esas rutas.</li>
+      <li><b>Dentro de una ruta</b> todas las cuentas se toman con el mismo adeudo promedio. El reporte no trae el adeudo por cuenta, así que el adeudo cubierto de una ruta parcial es proporcional.</li>
+      <li><b>Horario:</b> lunes a viernes de 9 a 16 h y sábado de 9 a 12 h, salvo en las semanas donde el sábado está marcado como inhábil. Todas las cuadrillas rinden igual y no se consideran traslados.</li>
+      <li><b>Datos de ejemplo:</b> 4 cuadrillas, 3 suspensiones por hora y 60 % de cuentas que pagan no son datos medidos. Cámbialos por los tuyos.</li>
+      <li><b>Horas extra:</b> de 17 a 19 h, lunes a viernes, con tope de 3 días por semana por persona (60 % del personal por día). A esa hora ya es de noche o casi.</li>
+    </ul>
+  </section>
+</div>
+
+<script>
+var R=[{"z": 1, "ruta": "196 FRACC. FLORENCIA", "c": 304, "m": 1548374.11}, {"z": 2, "ruta": "201 FRACC. LISBOA", "c": 212, "m": 543023.37}, {"z": 2, "ruta": "153 ALMENDROS", "c": 55, "m": 166263.73}, {"z": 4, "ruta": "234 VALLE SOLEADO", "c": 158, "m": 521754.77}, {"z": 4, "ruta": "208 FRACC. EL RECINTO", "c": 65, "m": 272731.02}, {"z": 4, "ruta": "023 FRACC. DON CARLOS", "c": 108, "m": 257745.27}, {"z": 5, "ruta": "027 FRACC. FUENTES DE TIZAYUCA", "c": 1029, "m": 3555616.57}, {"z": 5, "ruta": "154-H HEROES TIZAYUCA SADASI", "c": 1238, "m": 2995374.84}, {"z": 5, "ruta": "154-I HEROES TIZAYUCA SADASI", "c": 376, "m": 1999408.03}, {"z": 5, "ruta": "154-A HEROES TIZAYUCA SADASI", "c": 845, "m": 1806283.76}, {"z": 5, "ruta": "154-F HEROES TIZAYUCA SADASI", "c": 393, "m": 1719215.64}, {"z": 5, "ruta": "154-C HEROES TIZAYUCA SADASI", "c": 132, "m": 591828.95}, {"z": 5, "ruta": "154-B HEROES TIZAYUCA SADASI", "c": 54, "m": 256271.43}, {"z": 5, "ruta": "154-G HEROES TIZAYUCA SADASI", "c": 52, "m": 182595.07}, {"z": 5, "ruta": "154-D HEROES TIZAYUCA SADASI", "c": 35, "m": 83952.14}, {"z": 5, "ruta": "154-E HEROES TIZAYUCA SADASI", "c": 12, "m": 25810.14}, {"z": 6, "ruta": "130 HDT-3S-R3", "c": 87, "m": 340632.42}, {"z": 6, "ruta": "130 HDT-3S-R2", "c": 76, "m": 318538.46}, {"z": 6, "ruta": "130 HDT-1S-R2", "c": 86, "m": 275884.04}, {"z": 6, "ruta": "130 HDT-2S-R5", "c": 49, "m": 249707.84}, {"z": 6, "ruta": "130 HDT-7S-R2", "c": 82, "m": 248485.8}, {"z": 6, "ruta": "130 HDT-3S-R4", "c": 78, "m": 239819.44}, {"z": 6, "ruta": "130 HDT-2S-R4", "c": 61, "m": 237112.17}, {"z": 6, "ruta": "130 HDT-4S-R4", "c": 75, "m": 223920.99}, {"z": 6, "ruta": "130 HDT-3S-R7", "c": 69, "m": 221743.03}, {"z": 6, "ruta": "130 HDT-1S-R3", "c": 81, "m": 219350.63}, {"z": 6, "ruta": "130 HDT-3S-R1", "c": 69, "m": 217998.77}, {"z": 6, "ruta": "130 HDT-3S-R6", "c": 81, "m": 217976.86}, {"z": 6, "ruta": "130 HDT-5S-R1", "c": 95, "m": 214535.77}, {"z": 6, "ruta": "130 HDT-6S-R1", "c": 78, "m": 214319.43}, {"z": 6, "ruta": "130 HDT-2S-R3", "c": 80, "m": 211264.32}, {"z": 6, "ruta": "130 HDT-1S-R1", "c": 64, "m": 208686.87}, {"z": 6, "ruta": "130 HDT-1S-R4", "c": 65, "m": 207392.99}, {"z": 6, "ruta": "130 HDT-4S-R2", "c": 80, "m": 206911.53}, {"z": 6, "ruta": "130 HDT-2S-R2", "c": 74, "m": 191616.79}, {"z": 6, "ruta": "130 HDT-1S-R5", "c": 62, "m": 190185.3}, {"z": 6, "ruta": "130 HDT-7S-R1", "c": 66, "m": 185453.93}, {"z": 6, "ruta": "130 HDT-7S-R4", "c": 62, "m": 184517.95}, {"z": 6, "ruta": "130 HDT-7S-R3", "c": 53, "m": 169973.58}, {"z": 6, "ruta": "130 HDT-2S-R1", "c": 47, "m": 161284.15}, {"z": 6, "ruta": "130 HDT-4S-R1", "c": 47, "m": 117096.21}, {"z": 6, "ruta": "130 HDT-3S-R5", "c": 46, "m": 113395.62}, {"z": 6, "ruta": "130 HDT-1S-R6", "c": 42, "m": 98282.46}, {"z": 6, "ruta": "129 AREA COMERCIAL HACIENDAS", "c": 25, "m": 93217.19}, {"z": 6, "ruta": "130 HDT-4S-R3", "c": 49, "m": 91460.29}, {"z": 8, "ruta": "106 RDA-4S-R3", "c": 99, "m": 345818.75}, {"z": 8, "ruta": "101 RDA-3S-R3", "c": 84, "m": 298569.49}, {"z": 8, "ruta": "099 RDA-3S-R1", "c": 114, "m": 288043.27}, {"z": 8, "ruta": "107 RDA-4S-R4", "c": 69, "m": 279550.24}, {"z": 8, "ruta": "104 RDA-4S-R1", "c": 71, "m": 272068.3}, {"z": 8, "ruta": "105 RDA-4S-R2", "c": 69, "m": 262977.37}, {"z": 8, "ruta": "109 RDA-4S-R6", "c": 51, "m": 242033.67}, {"z": 8, "ruta": "100 RDA-3S-R2", "c": 81, "m": 231769.41}, {"z": 8, "ruta": "086 RDA-1S-R4", "c": 57, "m": 210255.96}, {"z": 8, "ruta": "102 RDA-3S-R4", "c": 55, "m": 184880.17}, {"z": 8, "ruta": "103 RDA-3S-R5", "c": 51, "m": 173892.41}, {"z": 8, "ruta": "087 RDA-1S-R5", "c": 62, "m": 168332.07}, {"z": 8, "ruta": "084 RDA-1S-R2", "c": 55, "m": 151624.69}, {"z": 8, "ruta": "085 RDA-1S-R3", "c": 59, "m": 133080.4}, {"z": 8, "ruta": "108 RDA-4S-R5", "c": 57, "m": 127852.8}, {"z": 8, "ruta": "083 RDA-1S-R1", "c": 40, "m": 80014.73}, {"z": 8, "ruta": "110 RDA-4S-R7", "c": 24, "m": 67101.45}, {"z": 9, "ruta": "015 EL MANANTIAL", "c": 136, "m": 483690.94}, {"z": 9, "ruta": "177-A PRIV. VALENCIA", "c": 92, "m": 291295.42}, {"z": 9, "ruta": "177-B PRIV. SEGOVIA", "c": 45, "m": 165948.04}];
+/*SIM-START*/
+function addDays(d,n){var x=new Date(d);x.setDate(x.getDate()+n);return x;}
+function hreg(d){var w=d.getDay();return w===0?0:(w===6?3:7);}
+function capFor(p,d,h){
+  var c=Math.floor(p.crews*p.srate*h), w=d.getDay();
+  if(p.extra&&w>=1&&w<=5)c+=Math.floor(Math.round(p.crews*p.pct/100)*p.srate*2);
+  return c;
+}
+function planW(p,R){
+  var ZS=[1,2,3,4,5,6,7,8,9],Q={},Z={};
+  var pins=(p.pins||[]).map(function(x,k){return {k:k,fecha:x.fecha,ruta:x.ruta,z:x.z,color:x.color,item:null};});
+  ZS.forEach(function(z){
+    var rs=R.filter(function(x){return x.z===z;}).map(function(x){return {z:x.z,ruta:x.ruta,c:x.c,m:x.m,r:x.m/x.c};});
+    rs.sort(function(a,b){return p.inner==='ratio'?(b.r-a.r):(b.m-a.m);});
+    rs.forEach(function(x){x.left=x.c;x.done=0;x.start=null;x.end=null;x.big=(x.z===5&&x.ruta.indexOf('027 ')===0);x.dias=0;x.lastDay=null;x.deferred=false;x.pinned=false;x.sched=false;});
+    Q[z]={items:rs,i:0};
+    Z[z]={z:z,n:rs.length,c:0,m:0,done:0,cov:0,start:null,end:null,left:0,blocks:[],sched:false,tz:false,cs:0,ls:0};
+  });
+  var tr=p.tramos.map(function(t,k){return {k:k,zs:t.zs,desde:t.desde,hasta:t.hasta,sab:t.sab};});
+  tr.forEach(function(t){t.zs.forEach(function(z){Z[z].tz=true;Z[z].sched=true;});});
+  pins.forEach(function(pn){
+    var it=Q[pn.z]?Q[pn.z].items.filter(function(x){return x.ruta===pn.ruta;})[0]:null;
+    if(it){it.pinned=true;pn.item=it;Z[pn.z].sched=true;}
+  });
+  tr.sort(function(a,b){return a.desde-b.desde;});
+  var days=[], stamps=[];
+  tr.forEach(function(t){stamps.push(t.desde.getTime(),t.hasta.getTime());});
+  pins.forEach(function(pn){if(pn.item)stamps.push(pn.fecha.getTime());});
+  if(stamps.length){
+    var d=new Date(Math.min.apply(null,stamps)), endT=Math.max.apply(null,stamps);
+    while(d.getTime()<=endT){
+      var dp=pins.filter(function(pn){return pn.item&&pn.fecha.getTime()===d.getTime();});
+      if(dp.length){
+        var h0=hreg(d);
+        if(h0>0){
+          var cap0=capFor(p,d,h0), c0=cap0, al0=[];
+          dp.forEach(function(pn){
+            var x=pn.item; if(x.left<=0||c0<=0)return;
+            var tt=Math.min(c0,x.left);
+            al0.push({r:x,n:tt,color:pn.color});x.left-=tt;x.done+=tt;c0-=tt;
+            if(!x.start)x.start=new Date(d);x.end=new Date(d);
+            Z[x.z].blocks.push({k:'p'+pn.k,start:new Date(d),end:new Date(d),done:tt,color:pn.color});
+          });
+          days.push({date:new Date(d),cap:cap0,used:cap0-c0,alloc:al0,pin:true});
+        }
+      }else{
+        var t=null;
+        for(var a=0;a<tr.length;a++){if(d>=tr[a].desde&&d<=tr[a].hasta){t=tr[a];break;}}
+        if(t){
+          var h=hreg(d); if(d.getDay()===6&&!t.sab)h=0;
+          if(h>0){
+            var cap=capFor(p,d,h), c=cap, alloc=[];
+            t.zs.forEach(function(z){
+              var q=Q[z];
+              while(c>0&&q.i<q.items.length){
+                var x=q.items[q.i];
+                if(x.left===0){q.i++;continue;}
+                if(x.big&&!x.deferred&&p.splitDays>0&&x.dias>=p.splitDays){x.deferred=true;q.items.splice(q.i,1);q.items.push(x);continue;}
+                var tt=Math.min(c,x.left);
+                if(x.big&&x.lastDay!==d.getTime()){x.dias++;x.lastDay=d.getTime();}
+                alloc.push({r:x,n:tt});x.left-=tt;x.done+=tt;c-=tt;
+                if(!x.start)x.start=new Date(d);x.end=new Date(d);
+                var zb=Z[z].blocks, lb=zb[zb.length-1];
+                if(!lb||lb.k!==t.k){lb={k:t.k,start:new Date(d),end:new Date(d),done:0};zb.push(lb);}
+                lb.end=new Date(d);lb.done+=tt;
+                if(x.left===0)q.i++;
+              }
+            });
+            days.push({date:new Date(d),cap:cap,used:cap-c,alloc:alloc,k:t.k});
+          }
+        }
+      }
+      d=addDays(d,1);
+    }
+  }
+  var order=[];
+  tr.forEach(function(t){t.zs.forEach(function(z){if(order.indexOf(z)<0)order.push(z);});});
+  pins.forEach(function(pn){if(pn.item&&order.indexOf(pn.z)<0)order.push(pn.z);});
+  [9,1,2,4,5,6,8,3,7].forEach(function(z){if(order.indexOf(z)<0)order.push(z);});
+  order=order.filter(function(z){return Z[z].n>0;});
+  var q=[],covered=0,need=0,left=0,T=0;
+  order.forEach(function(z){
+    var s=Z[z];
+    Q[z].items.forEach(function(x){
+      x.sched=s.tz||x.pinned;
+      s.c+=x.c;s.m+=x.m;s.done+=x.done;s.cov+=x.m*x.done/x.c;s.left+=x.left;
+      if(x.sched){s.cs+=x.c;s.ls+=x.left;need+=x.c;left+=x.left;}
+      if(x.start&&(!s.start||x.start<s.start))s.start=x.start;
+      if(x.end&&(!s.end||x.end>s.end))s.end=x.end;
+      q.push(x);
+    });
+    T+=s.m;covered+=s.cov;
+  });
+  var capTotal=0;days.forEach(function(x){capTotal+=x.cap;});
+  return {q:q,Z:Z,order:order,days:days,covered:covered,need:need,left:left,T:T,capTotal:capTotal};
+}
+function withCrews(p,k){return {crews:k,srate:p.srate,extra:p.extra,pct:p.pct,inner:p.inner,splitDays:p.splitDays,tramos:p.tramos,pins:p.pins};}
+function minCrewsZone(p,R,z){
+  var base=function(k){return planW(withCrews(p,k),R).Z[z].ls;};
+  if(base(300)>0)return null;
+  var lo=1,hi=300;
+  while(lo<hi){var mid=Math.floor((lo+hi)/2);if(base(mid)===0)hi=mid;else lo=mid+1;}
+  return lo;
+}
+function minCrewsRoute(p,R,z,ruta){
+  var base=function(k){var s=planW(withCrews(p,k),R);var x=s.q.filter(function(r){return r.z===z&&r.ruta===ruta;})[0];return x?x.left:1;};
+  if(base(300)>0)return null;
+  var lo=1,hi=300;
+  while(lo<hi){var mid=Math.floor((lo+hi)/2);if(base(mid)===0)hi=mid;else lo=mid+1;}
+  return lo;
+}
+/*SIM-END*/
+
+(function(){
+var ZC={1:'#4E79A7',2:'#EDC948',3:'#9C755F',4:'#2FB5D6',5:'#2E9E5B',6:'#F28E2B',7:'#B07AA1',8:'#7E3FBF',9:'#6B7280'};
+var $=function(id){return document.getElementById(id);};
+var fmt=function(n){return Math.round(n).toLocaleString('es-MX');};
+var money=function(n){return n.toLocaleString('es-MX',{style:'currency',currency:'MXN',maximumFractionDigits:0});};
+var moneyM=function(n){return '$'+(n/1e6).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})+' M';};
+var pc=function(x,d){return (x*100).toLocaleString('es-MX',{minimumFractionDigits:d||0,maximumFractionDigits:d||0})+' %';};
+var fdm=new Intl.DateTimeFormat('es-MX',{day:'numeric',month:'short'});
+var fm=new Intl.DateTimeFormat('es-MX',{month:'short'});
+var key=function(d){return d.getFullYear()+'-'+d.getMonth()+'-'+d.getDate();};
+var clamp=function(v,a,b){v=isFinite(v)?v:a;return Math.min(b,Math.max(a,v));};
+function lum(hex){var c=[1,3,5].map(function(i){var v=parseInt(hex.substr(i,2),16)/255;return v<=0.03928?v/12.92:Math.pow((v+0.055)/1.055,2.4);});return 0.2126*c[0]+0.7152*c[1]+0.0722*c[2];}
+function textOn(hex){var L=lum(hex);return (1.05/(L+0.05))>=((L+0.05)/0.0522)?'#FFFFFF':'#14181D';}
+function dparse(v){if(!v)return null;var z=v.split('-');var d=new Date(+z[0],+z[1]-1,+z[2],12);return isNaN(d)?null:d;}
+var stc=function(col){return 'background:'+col+';color:'+textOn(col);};
+var st=function(z){return stc(ZC[z]);};
+var TR=[
+  {zs:'4, 5',desde:'2026-11-17',hasta:'2026-11-28',sab:true},
+  {zs:'6',desde:'2026-11-30',hasta:'2026-12-05',sab:true},
+  {zs:'8',desde:'2026-12-07',hasta:'2026-12-11',sab:false},
+  {zs:'8',desde:'2026-12-14',hasta:'2026-12-19',sab:true}
+];
+var RS=R.slice().sort(function(a,b){return a.z-b.z;});
+function ri(label){for(var i=0;i<RS.length;i++){if(RS[i].ruta===label)return i;}return 0;}
+var PIN=[
+  {fecha:'2026-12-21',ri:ri('201 FRACC. LISBOA'),color:'#D64550'},
+  {fecha:'2026-12-22',ri:ri('196 FRACC. FLORENCIA'),color:'#D63FA7'},
+  {fecha:'2026-12-23',ri:ri('153 ALMENDROS'),color:'#0F766E'}
+];
+function parseZs(s){var out=[];String(s).split(/[^0-9]+/).forEach(function(t){var n=parseInt(t,10);if(n>=1&&n<=9&&out.indexOf(n)<0)out.push(n);});return out;}
+function tramos(){
+  var out=[];
+  TR.forEach(function(t){var zs=parseZs(t.zs),a=dparse(t.desde),b=dparse(t.hasta);if(zs.length&&a&&b&&a<=b)out.push({zs:zs,desde:a,hasta:b,sab:!!t.sab});});
+  return out;
+}
+function pinsOf(){
+  var out=[];
+  PIN.forEach(function(pn,i){var f=dparse(pn.fecha),r=RS[pn.ri];if(f&&r)out.push({fecha:f,ruta:r.ruta,z:r.z,color:pn.color,i:i});});
+  return out;
+}
+function buildTr(){
+  var tb=$('trbody');tb.innerHTML='';
+  TR.forEach(function(t,i){
+    var tr=document.createElement('tr');
+    tr.innerHTML='<td><input type="text" value="'+t.zs+'" aria-label="Zonas de la semana '+(i+1)+'"></td><td><input type="date" value="'+t.desde+'" aria-label="Desde"></td><td><input type="date" value="'+t.hasta+'" aria-label="Hasta"></td><td><input type="checkbox" '+(t.sab?'checked':'')+' aria-label="Trabaja sábado"></td><td><button type="button">Quitar</button></td>';
+    var ins=tr.querySelectorAll('input');
+    ins[0].addEventListener('input',function(){t.zs=ins[0].value;render();});
+    ins[1].addEventListener('input',function(){t.desde=ins[1].value;render();});
+    ins[2].addEventListener('input',function(){t.hasta=ins[2].value;render();});
+    ins[3].addEventListener('change',function(){t.sab=ins[3].checked;render();});
+    tr.querySelector('button').addEventListener('click',function(){TR.splice(i,1);buildTr();render();});
+    tb.appendChild(tr);
+  });
+}
+var pinRefs=[];
+function buildPin(){
+  var tb=$('pnbody');tb.innerHTML='';pinRefs=[];
+  PIN.forEach(function(pn,i){
+    var tr=document.createElement('tr');
+    var opts=RS.map(function(r,j){return '<option value="'+j+'"'+(j===pn.ri?' selected':'')+'>Zona '+r.z+' · '+r.ruta+'</option>';}).join('');
+    tr.innerHTML='<td><input type="date" value="'+pn.fecha+'" aria-label="Fecha"></td><td><select aria-label="Ruta">'+opts+'</select></td><td class="zc"></td><td><input type="color" value="'+pn.color+'" aria-label="Color del día"></td><td class="n pk"></td><td><button type="button">Quitar</button></td>';
+    var d=tr.querySelector('input[type=date]'),sel=tr.querySelector('select'),col=tr.querySelector('input[type=color]');
+    d.addEventListener('input',function(){pn.fecha=d.value;render();});
+    sel.addEventListener('change',function(){pn.ri=+sel.value;render();});
+    col.addEventListener('input',function(){pn.color=col.value;render();});
+    tr.querySelector('button').addEventListener('click',function(){PIN.splice(i,1);buildPin();render();});
+    pinRefs.push({zc:tr.children[2],pk:tr.children[4]});
+    tb.appendChild(tr);
+  });
+}
+$('addtr').addEventListener('click',function(){TR.push({zs:'9',desde:'2026-12-28',hasta:'2026-12-30',sab:false});buildTr();render();});
+$('addpn').addEventListener('click',function(){PIN.push({fecha:'2026-12-24',ri:0,color:'#B45309'});buildPin();render();});
+$('legend').innerHTML=[1,2,3,4,5,6,7,8,9].map(function(z){return '<span><span class="sw" style="background:'+ZC[z]+'"></span>Zona '+z+((z===3||z===7)?' (sin datos)':'')+'</span>';}).join('')+'<span>Los días con ruta fija usan el color que elijas para cada día.</span>';
+
+function render(){
+  var tm=tramos(), pn=pinsOf();
+  var p={crews:clamp(parseInt($('sc').value,10),1,300),srate:clamp(parseFloat($('sr').value),0.1,100),extra:$('extra').checked,
+    pct:clamp(parseFloat($('pct').value),0,100),inner:$('inner').value,splitDays:clamp(parseInt($('sx').value,10),0,30),tramos:tm,pins:pn};
+  $('pct').disabled=!p.extra;
+  var tasa=clamp(parseFloat($('tasa').value),0,100)/100;
+  var s=planW(p,R), Z=s.Z;
+  var bad=TR.length-tm.length;
+  $('trnote').innerHTML=(bad>0?'<span class="warn">'+bad+' fila'+(bad===1?'':'s')+' sin zonas o con fechas incompletas no se usa'+(bad===1?'':'n')+'.</span> ':'')+'Escribe las zonas separadas por coma. Si dos semanas se cruzan, la primera tiene prioridad.';
+
+  /* días con ruta fija: zona y cuadrillas */
+  PIN.forEach(function(x,i){
+    var r=RS[x.ri],ok=dparse(x.fecha)&&r;
+    pinRefs[i].zc.textContent=ok?('Zona '+r.z):'—';
+    var k=ok?minCrewsRoute(p,R,r.z,r.ruta):null;
+    pinRefs[i].pk.textContent=ok?(k===null?'300+':k):'—';
+  });
+
+  var cr={},schedZ=s.order.filter(function(z){return Z[z].sched;});
+  schedZ.forEach(function(z){cr[z]=minCrewsZone(p,R,z);});
+  var need=0,over=false;schedZ.forEach(function(z){if(cr[z]===null)over=true;else if(cr[z]>need)need=cr[z];});
+  var worstZ=null;schedZ.forEach(function(z){if(cr[z]===need&&worstZ===null)worstZ=z;});
+  var unsched=s.order.filter(function(z){return !Z[z].sched;});
+  var unC=0;unsched.forEach(function(z){unC+=Z[z].c;});
+  var incomplete=schedZ.filter(function(z){return Z[z].ls>0;});
+
+  var v=$('verdict');
+  if(!tm.length&&!pn.length){v.className='verdict bad';v.textContent='No hay semanas ni días programados. Agrega al menos uno.';}
+  else if(!incomplete.length){
+    v.className='verdict ok';
+    v.textContent='Alcanza. Las rutas programadas ('+fmt(s.need)+' cuentas) terminan en sus fechas y cubren '+moneyM(s.covered)+' ('+pc(s.covered/s.T,1)+' del adeudo del reporte).'+(unsched.length?' Faltan zonas sin fecha: '+unsched.join(', ')+'.':'');
+  }else{
+    v.className='verdict bad';
+    v.textContent='No alcanza con '+p.crews+' cuadrillas. Zonas que no terminan en sus fechas: '+incomplete.map(function(z){return z+' ('+fmt(Z[z].cs-Z[z].ls)+' de '+fmt(Z[z].cs)+')';}).join(', ')+'. Para que todas terminen en sus fechas se necesitan '+(over?'más de 300':need)+' cuadrillas'+(unsched.length?'. Además, las zonas '+unsched.join(', ')+' no tienen fecha asignada.':'.');
+  }
+  var K=[
+    ['Cuentas con fecha asignada',fmt(s.need),schedZ.length+' zonas'+(unsched.length?'. Sin fecha: '+unsched.join(', ')+' ('+fmt(unC)+' cuentas)':'')],
+    ['Capacidad de las fechas',fmt(s.capTotal),'suspensiones con '+p.crews+' cuadrillas'],
+    ['Adeudo cubierto',moneyM(s.covered),pc(s.covered/s.T,1)+' del adeudo del reporte'],
+    ['Recuperación estimada',moneyM(s.covered*tasa),'Si paga el '+pc(tasa)+' de las cuentas (dato de ejemplo)'],
+    ['Cuadrillas necesarias',over?'300+':String(need),worstZ?('La fecha más exigente es la de la Zona '+worstZ):'Sin zonas programadas']
+  ];
+  $('kpis').innerHTML=K.map(function(k){return '<div class="kpi"><div class="l">'+k[0]+'</div><div class="v">'+k[1]+'</div><div class="s">'+k[2]+'</div></div>';}).join('');
+  $('note').textContent=(p.extra?'Lunes a viernes incluye las horas extra de 17 a 19 h. ':'Solo horario regular. ')+'El adeudo cubierto cuenta solo lo que alcanzan a suspender las cuadrillas dentro de las fechas programadas.';
+
+  /* rango de fechas */
+  var minD=null,maxD=null;
+  tm.forEach(function(t){if(!minD||t.desde<minD)minD=t.desde;if(!maxD||t.hasta>maxD)maxD=t.hasta;});
+  pn.forEach(function(x){if(!minD||x.fecha<minD)minD=x.fecha;if(!maxD||x.fecha>maxD)maxD=x.fecha;});
+  if(!minD){minD=new Date(2026,10,17,12);maxD=new Date(2026,11,23,12);}
+  var N=Math.round((maxD-minD)/864e5)+1;
+  var idx=function(d){return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate(),12)-minD)/864e5);};
+
+  /* avance por zona */
+  var h='<div class="tr"><div class="tl-l"></div><div class="track axis">';
+  for(var k=0;k<N;k++){var dd=addDays(minD,k);if(dd.getDay()===1||k===0)h+='<span class="tick" style="left:'+(k/N*100)+'%">'+fdm.format(dd)+'</span>';}
+  h+='</div></div>';
+  s.order.forEach(function(z){
+    var zz=Z[z];
+    h+='<div class="tr"><div class="tl-l"><span class="sw" style="background:'+ZC[z]+'"></span>Zona '+z+'</div><div class="track">';
+    if(!zz.sched)h+='<span class="nd">Sin fecha asignada</span>';
+    else{
+      tm.forEach(function(t){if(t.zs.indexOf(z)>=0){var a=idx(t.desde),b=idx(t.hasta);h+='<div class="win" style="left:'+(a/N*100)+'%;width:'+((b-a+1)/N*100)+'%"></div>';}});
+      zz.blocks.forEach(function(b){var a=idx(b.start),e=idx(b.end);h+='<div class="bar" style="left:'+(a/N*100)+'%;width:'+((e-a+1)/N*100)+'%;'+(b.color?stc(b.color):st(z))+'" title="'+fmt(b.done)+' cuentas">'+fmt(b.done)+'</div>';});
+    }
+    h+='</div></div>';
+  });
+  $('tl').innerHTML=h;
+
+  /* calendario */
+  var map={};s.days.forEach(function(x){map[key(x.date)]=x;});
+  var first=new Date(minD);while(first.getDay()!==1)first=addDays(first,-1);
+  var last=new Date(maxD);while(last.getDay()!==0)last=addDays(last,1);
+  var tAt=function(d){for(var i=0;i<tm.length;i++){if(d>=tm[i].desde&&d<=tm[i].hasta)return tm[i];}return null;};
+  var pAt=function(d){for(var i=0;i<pn.length;i++){if(key(pn[i].fecha)===key(d))return pn[i];}return null;};
+  var c='';['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].forEach(function(n){c+='<div class="dow">'+n+'</div>';});
+  for(var d=new Date(first);d<=last;d=addDays(d,1)){
+    var w=d.getDay(), t=tAt(d), pp=pAt(d), x=map[key(d)];
+    var inhab=false;
+    if(w===6&&!pp){var tt=t||tAt(addDays(d,-1));if(tt&&!tt.sab)inhab=true;}
+    var cls='cell '+(w===0?'off':(inhab?'off':((t||pp)?'work':'pre')));
+    var tags='';
+    tm.forEach(function(tr){if(key(tr.desde)===key(d))tags+='<div class="tag">Zona'+(tr.zs.length>1?'s ':' ')+tr.zs.join(', ')+'</div>';});
+    if(pp)tags+='<div class="tag">Día fijo: Zona '+pp.z+'</div>';
+    if(inhab)tags+='<div class="tag">Sábado inhábil</div>';
+    var segs='';
+    if(x)x.alloc.forEach(function(al){
+      segs+='<div class="seg" style="'+(al.color?stc(al.color):st(al.r.z))+'" title="Zona '+al.r.z+' · '+al.r.ruta+': '+fmt(al.n)+' de '+fmt(al.r.c)+' cuentas"><span class="rt">Z'+al.r.z+' · '+al.r.ruta+'</span><span class="nn">'+fmt(al.n)+'</span></div>';
+    });
+    var lab=(d.getDate()===1||d.getTime()===first.getTime())?'<small>'+fm.format(d)+'</small>':'';
+    c+='<div class="'+cls+'"><div class="dn"><span>'+d.getDate()+'</span>'+lab+'</div>'+tags+segs+(x?'<div class="cap">'+fmt(x.used)+' de '+fmt(x.cap)+'</div>':'')+'</div>';
+  }
+  $('cal').innerHTML=c;
+
+  /* tabla de zonas */
+  $('ztable').innerHTML=s.order.map(function(z){
+    var zz=Z[z], sw='<span class="sw" style="background:'+ZC[z]+'"></span>';
+    var wins=tm.filter(function(t){return t.zs.indexOf(z)>=0;}).map(function(t){return fdm.format(t.desde)+' a '+fdm.format(t.hasta);});
+    pn.filter(function(x){return x.z===z;}).forEach(function(x){wins.push(fdm.format(x.fecha)+' (día fijo)');});
+    return '<tr'+(zz.sched?'':' class="nodata"')+'><td>'+sw+'Zona '+z+'</td><td class="n">'+zz.n+'</td><td class="n">'+fmt(zz.c)+'</td><td class="n">'+money(zz.m)+'</td><td>'+(wins.join(' y ')||'Sin fecha asignada')+'</td><td class="n">'+fmt(zz.done)+' de '+fmt(zz.c)+'</td><td class="n">'+money(zz.cov)+'</td><td class="n">'+(zz.sched?(cr[z]===null?'300+':cr[z]):'—')+'</td></tr>';
+  }).join('');
+
+  /* tabla de rutas */
+  $('tbody').innerHTML=s.q.map(function(x,i){
+    return '<tr'+(x.sched?'':' class="nodata"')+'><td class="n">'+(i+1)+'</td><td><span class="sw" style="background:'+ZC[x.z]+'"></span>Zona '+x.z+'</td><td>'+x.ruta+(x.deferred?' (en 2 tramos)':'')+'</td><td class="n">'+fmt(x.c)+'</td><td class="n">'+money(x.m)+'</td><td class="n">'+money(x.r)+'</td><td>'+(x.start?fdm.format(x.start):(x.sched?'—':'sin fecha'))+'</td><td>'+(x.left===0&&x.end?fdm.format(x.end):(x.start?'sin terminar':'—'))+'</td><td class="n">'+fmt(x.done)+' de '+fmt(x.c)+'</td></tr>';
+  }).join('');
+}
+['sc','sr','inner','sx','tasa','extra','pct'].forEach(function(id){$(id).addEventListener('input',render);$(id).addEventListener('change',render);});
+buildTr();buildPin();render();
+})();
+</script>
+
+</body></html>
